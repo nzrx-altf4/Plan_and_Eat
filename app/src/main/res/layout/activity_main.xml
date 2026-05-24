@@ -263,7 +263,6 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:background="#111111"
-        app:itemActiveIndicatorColor="#1F1F1F"
         app:itemIconTint="@drawable/bottom_nav_icon_selector"
         app:itemTextColor="@drawable/bottom_nav_text_selector"
         app:labelVisibilityMode="labeled"
