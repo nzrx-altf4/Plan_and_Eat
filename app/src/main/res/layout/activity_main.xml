@@ -1,19 +1,364 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!--
+    res/layout/activity_main.xml
+    Main Dashboard Layout for "Plan and Eat"
+    ─────────────────────────────────────────
+    Design system:
+      • Root:            ConstraintLayout (full-screen)
+      • Theme:           Dark mode — #0D0D0D background, #FFFFFF / #B0B0B0 text
+      • Accent:          Amber/Yellow (#FFC107) for FAB and key highlights
+      • Typography:      Relies on Material TextAppearance styles
+      • Sections:        Header card → RecyclerView / Empty state → BottomNav + FAB
+    ─────────────────────────────────────────
+    Dependencies required in build.gradle (app):
+      implementation 'com.google.android.material:material:<latest>'
+    ─────────────────────────────────────────
+    In your Activity, set the window / status-bar colour programmatically or via
+    the app theme (recommended: Theme.Material3.DayNight or a custom dark variant).
+-->
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/main"
+    android:id="@+id/rootLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="#0D0D0D"
     tools:context=".MainActivity">
 
-    <TextView
-        android:layout_width="wrap_content"
+    <!-- ══════════════════════════════════════════════════
+         TOP SECTION — Budget Dashboard Card
+         ══════════════════════════════════════════════════ -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardDashboard"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Hello World!"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp"
+        app:cardBackgroundColor="#1A1A1A"
+        app:cardCornerRadius="20dp"
+        app:cardElevation="0dp"
+        app:strokeColor="#2A2A2A"
+        app:strokeWidth="1dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="24dp"
+            android:paddingTop="24dp"
+            android:paddingEnd="24dp"
+            android:paddingBottom="24dp">
+
+            <!-- Greeting label — small eyebrow text -->
+            <TextView
+                android:id="@+id/tvGreeting"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Good morning 👋"
+                android:textColor="#808080"
+                android:textSize="12sp"
+                android:letterSpacing="0.08"
+                android:fontFamily="sans-serif-medium"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent" />
+
+            <!-- Today's date subtitle -->
+            <TextView
+                android:id="@+id/tvDate"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Monday, June 23 2025"
+                android:textColor="#505050"
+                android:textSize="11sp"
+                android:fontFamily="sans-serif"
+                android:letterSpacing="0.04"
+                app:layout_constraintTop_toBottomOf="@id/tvGreeting"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                tools:ignore="HardcodedText" />
+
+            <!-- Divider line -->
+            <View
+                android:id="@+id/dividerCard"
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_marginTop="16dp"
+                android:background="#252525"
+                app:layout_constraintTop_toBottomOf="@id/tvDate"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <!-- Budget label — descriptor above the amount -->
+            <TextView
+                android:id="@+id/tvBudgetLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="REMAINING BUDGET"
+                android:textColor="#FFC107"
+                android:textSize="10sp"
+                android:letterSpacing="0.15"
+                android:fontFamily="sans-serif-medium"
+                app:layout_constraintTop_toBottomOf="@id/dividerCard"
+                app:layout_constraintStart_toStartOf="parent" />
+
+            <!-- ★ PRIMARY: Remaining Budget amount -->
+            <TextView
+                android:id="@+id/tvRemainingBudget"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="P0.00"
+                android:textColor="#FFFFFF"
+                android:textSize="42sp"
+                android:fontFamily="sans-serif-light"
+                android:letterSpacing="-0.02"
+                android:includeFontPadding="false"
+                app:layout_constraintTop_toBottomOf="@id/tvBudgetLabel"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/ivBudgetIcon"
+                tools:ignore="HardcodedText" />
+
+            <!-- Decorative budget icon on the right -->
+            <ImageView
+                android:id="@+id/ivBudgetIcon"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@android:drawable/ic_dialog_info"
+                app:tint="#FFC107"
+                android:alpha="0.25"
+                android:contentDescription="Budget icon"
+                app:layout_constraintTop_toTopOf="@id/tvRemainingBudget"
+                app:layout_constraintBottom_toBottomOf="@id/tvRemainingBudget"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <!-- Budget status chip (e.g., "On Track" or "Over Budget") -->
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipBudgetStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Set a budget to get started"
+                android:textColor="#A0A0A0"
+                android:textSize="11sp"
+                app:chipBackgroundColor="#252525"
+                app:chipStrokeColor="#333333"
+                app:chipStrokeWidth="1dp"
+                app:chipIconTint="#808080"
+                app:closeIconVisible="false"
+                app:layout_constraintTop_toBottomOf="@id/tvRemainingBudget"
+                app:layout_constraintStart_toStartOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- ══════════════════════════════════════════════════
+         SECTION LABEL — "Today's Meals"
+         ══════════════════════════════════════════════════ -->
+    <TextView
+        android:id="@+id/tvSectionLabel"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="28dp"
+        android:layout_marginEnd="24dp"
+        android:text="TODAY'S PLAN"
+        android:textColor="#505050"
+        android:textSize="10sp"
+        android:letterSpacing="0.15"
+        android:fontFamily="sans-serif-medium"
+        app:layout_constraintTop_toBottomOf="@id/cardDashboard"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- ══════════════════════════════════════════════════
+         MIDDLE SECTION — Meal RecyclerView
+         ══════════════════════════════════════════════════ -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerMeals"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="16dp"
+        android:clipToPadding="false"
+        android:paddingBottom="16dp"
+        android:scrollbars="none"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        app:layout_constraintTop_toBottomOf="@id/tvSectionLabel"
+        app:layout_constraintBottom_toTopOf="@id/bottomNavigationView"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:itemCount="3"
+        tools:listitem="@layout/item_meal"
+        tools:visibility="visible" />
+
+    <!-- ══════════════════════════════════════════════════
+         EMPTY STATE — shown when RecyclerView has no items
+         ══════════════════════════════════════════════════ -->
+    <LinearLayout
+        android:id="@+id/layoutEmptyState"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/tvSectionLabel"
+        app:layout_constraintBottom_toTopOf="@id/bottomNavigationView"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:visibility="gone">
+
+        <!-- Illustrative empty-state icon -->
+        <ImageView
+            android:id="@+id/ivEmptyIcon"
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:src="@android:drawable/ic_menu_my_calendar"
+            app:tint="#2A2A2A"
+            android:contentDescription="No meals illustration"
+            android:layout_marginBottom="16dp" />
+
+        <!-- ★ PRIMARY empty state text -->
+        <TextView
+            android:id="@+id/tvEmptyState"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="No meals planned yet."
+            android:textColor="#505050"
+            android:textSize="18sp"
+            android:fontFamily="sans-serif-medium"
+            android:gravity="center" />
+
+        <!-- Secondary empty state hint -->
+        <TextView
+            android:id="@+id/tvEmptyStateHint"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="Tap + to start building your plan!"
+            android:textColor="#383838"
+            android:textSize="13sp"
+            android:fontFamily="sans-serif"
+            android:gravity="center" />
+
+    </LinearLayout>
+
+    <!-- ══════════════════════════════════════════════════
+         BOTTOM SECTION — BottomNavigationView
+         ══════════════════════════════════════════════════ -->
+
+    <!-- ══════════════════════════════════════════════════
+         FAB — Floating Action Button (Add Meal)
+         Positioned above the BottomNav on the right side.
+         ══════════════════════════════════════════════════ -->
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNavigationView"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:background="#111111"
+        app:itemActiveIndicatorColor="#1F1F1F"
+        app:itemIconTint="@drawable/bottom_nav_icon_selector"
+        app:itemTextColor="@drawable/bottom_nav_text_selector"
+        app:labelVisibilityMode="labeled"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:menu="@menu/menu_bottom_nav"
+        tools:ignore="HardcodedColor" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabAddMeal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="16dp"
+        android:src="@android:drawable/ic_input_add"
+        android:contentDescription="Add a new meal"
+        app:backgroundTint="#FFC107"
+        app:tint="#0D0D0D"
+        app:fabSize="normal"
+        app:elevation="8dp"
+        app:pressedTranslationZ="14dp"
+        app:rippleColor="#FFCA28"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/bottomNavigationView" />
+
+    <!-- ══════════════════════════════════════════════════
+         TOP EDGE FADE — subtle gradient to soften scroll
+         ══════════════════════════════════════════════════ -->
+    <View
+        android:id="@+id/viewTopFade"
+        android:layout_width="0dp"
+        android:layout_height="24dp"
+        android:background="@drawable/gradient_top_fade"
+        android:importantForAccessibility="no"
+        app:layout_constraintTop_toBottomOf="@id/tvSectionLabel"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!--
+        ════════════════════════════════════════════════════════════════════
+        ADDITIONAL FILES NEEDED — Create these in your project:
+        ════════════════════════════════════════════════════════════════════
+
+        1.  res/drawable/bottom_nav_icon_selector.xml
+            ────────────────────────────────────────
+            <?xml version="1.0" encoding="utf-8"?>
+            <selector xmlns:android="http://schemas.android.com/apk/res/android">
+                <item android:color="#FFC107" android:state_checked="true" />
+                <item android:color="#505050" />
+            </selector>
+
+        2.  res/drawable/bottom_nav_text_selector.xml
+            ─────────────────────────────────────────
+            <?xml version="1.0" encoding="utf-8"?>
+            <selector xmlns:android="http://schemas.android.com/apk/res/android">
+                <item android:color="#FFC107" android:state_checked="true" />
+                <item android:color="#505050" />
+            </selector>
+
+        3.  res/drawable/gradient_top_fade.xml
+            ────────────────────────────────────
+            <?xml version="1.0" encoding="utf-8"?>
+            <shape xmlns:android="http://schemas.android.com/apk/res/android">
+                <gradient
+                    android:startColor="#0D0D0D"
+                    android:endColor="#000D0D0D"
+                    android:angle="270" />
+            </shape>
+
+        4.  res/layout/item_meal.xml
+            ─────────────────────────
+            A card-based row layout for each meal entry (Breakfast / Lunch / Dinner).
+            Suggested structure inside a MaterialCardView:
+              - ImageView  : meal-type icon (tinted amber)
+              - TextView   : meal type label (e.g., "Breakfast")
+              - TextView   : meal name / subtitle
+              - TextView   : cost (e.g., "P120.00")
+              - ImageButton: overflow / edit menu
+
+        5.  Vector icons (via Resource Manager > Vector Asset):
+              ic_restaurant_menu  (for "Plan" nav item)
+              ic_archive          (for "Past Records" nav item)
+
+        ════════════════════════════════════════════════════════════════════
+        SHOWING / HIDING EMPTY STATE (MainActivity.kt / .java snippet):
+        ════════════════════════════════════════════════════════════════════
+
+            fun updateEmptyState(isEmpty: Boolean) {
+                binding.recyclerMeals.visibility   = if (isEmpty) View.GONE  else View.VISIBLE
+                binding.layoutEmptyState.visibility = if (isEmpty) View.VISIBLE else View.GONE
+            }
+
+        ════════════════════════════════════════════════════════════════════
+    -->
