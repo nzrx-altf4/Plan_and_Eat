@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    res/drawable/ic_coin_heads.xml
+    Gold coin — heads side (crown / star symbol)
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+
+    <!-- Outer coin body -->
+    <path
+        android:fillColor="#FFC107"
+        android:pathData="M60,6 C30.7,6 7,29.7 7,59 C7,88.3 30.7,112 60,112 C89.3,112 113,88.3 113,59 C113,29.7 89.3,6 60,6 Z" />
+
+    <!-- Inner ring -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#E6A800"
+        android:strokeWidth="3"
+        android:pathData="M60,16 C36.2,16 17,35.2 17,59 C17,82.8 36.2,102 60,102 C83.8,102 103,82.8 103,59 C103,35.2 83.8,16 60,16 Z" />
+
+    <!-- Crown / H symbol for "Heads" -->
+    <!-- Left crown pillar -->
+    <path
+        android:fillColor="#E6A800"
+        android:pathData="M38,75 L38,50 L46,50 L46,75 Z" />
+    <!-- Right crown pillar -->
+    <path
+        android:fillColor="#E6A800"
+        android:pathData="M74,75 L74,50 L82,50 L82,75 Z" />
+    <!-- Center bridge -->
+    <path
+        android:fillColor="#E6A800"
+        android:pathData="M46,60 L74,60 L74,68 L46,68 Z" />
+    <!-- Crown top left point -->
+    <path
+        android:fillColor="#E6A800"
+        android:pathData="M38,50 L44,38 L50,50 Z" />
+    <!-- Crown top center point -->
+    <path
+        android:fillColor="#E6A800"
+        android:pathData="M54,50 L60,36 L66,50 Z" />
+    <!-- Crown top right point -->
+    <path
+        android:fillColor="#E6A800"
+        android:pathData="M70,50 L76,38 L82,50 Z" />
+
+</vector>

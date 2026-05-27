@@ -3,34 +3,30 @@
     res/layout/activity_add_plan.xml
     "Plan and Eat" — Add / Create Meal Plan Screen
     ═══════════════════════════════════════════════════════════════
-    Design system (mirrors activity_main.xml):
-      Background   : #0D0D0D  (near-black)
-      Surface card : #1A1A1A  (elevated dark surface)
-      Stroke/border: #2A2A2A  (subtle separator)
-      Accent       : #FFC107  (amber — buttons, checkbox, labels)
-      Primary text : #FFFFFF
-      Hint/label   : #808080
-      Error        : #CF6679
+    ALL RESOURCE-LINKING ERRORS FIXED:
 
-    Root: ScrollView → ConstraintLayout
-      Allows the form to scroll freely when the soft keyboard is raised.
-      In AndroidManifest.xml set:
-        android:windowSoftInputMode="adjustResize"
-      on the AddPlanActivity entry so the ScrollView resizes correctly.
+    FIX 1 — boxStrokeColorStateList (×3 occurrences)
+      REMOVED:  app:boxStrokeColorStateList="@color/til_stroke_selector"
+      REASON:   Requires Material 1.5.0+; causes link failure on older versions
+      REPLACED: app:boxStrokeColor="#FFC107" (focused amber, works on all versions)
 
-    Material TextInputLayout style used throughout:
-      style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-    Override box stroke colours in your app theme or inline:
-      app:boxStrokeColor     = "#FFC107"   (focused)
-      app:boxStrokeColorStateList (see selector note at bottom)
+    FIX 2 — counterTextColor incompatible hex (tilMealName)
+      REMOVED:  app:counterTextColor="#505050"
+      REPLACED: app:counterTextColor="@color/counter_normal"
+      ACTION:   Add <color name="counter_normal">#505050</color> to colors.xml
 
-    Dependencies (build.gradle :app):
-      implementation 'com.google.android.material:material:1.12.0'
-      implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    FIX 3 — counterOverflowTextColor incompatible hex (tilMealName)
+      REMOVED:  app:counterOverflowTextColor="#CF6679"
+      REPLACED: app:counterOverflowTextColor="@color/counter_overflow"
+      ACTION:   Add <color name="counter_overflow">#CF6679</color> to colors.xml
+
+    FIX 4 — android:buttonCompat not found (cbIsHomemade)
+      REMOVED:  android:button="@null"
+      REMOVED:  android:buttonCompat="@null"         ← wrong namespace
+      REMOVED:  app:buttonCompat="@drawable/cb_homemade_selector"  ← file doesn't exist
+      KEPT:     app:buttonTint="#FFC107"              ← sufficient for amber tint
     ═══════════════════════════════════════════════════════════════
 -->
-
-<!-- ── ROOT: ScrollView allows the form to scroll on small screens ── -->
 <ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -41,11 +37,6 @@
     android:fillViewport="true"
     android:scrollbars="none">
 
-    <!--
-        fillViewport="true" → ConstraintLayout stretches to at least
-        the full screen height so the buttons stay pinned to the bottom
-        even when there is little content.
-    -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -56,22 +47,20 @@
              HEADER SECTION
              ═══════════════════════════════════════════════════ -->
 
-        <!-- Back / close icon — top-left -->
         <ImageButton
             android:id="@+id/btnBack"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
-            android:layout_marginTop="12dp"
-            android:padding="12dp"
+            android:layout_marginTop="4dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Go back"
+            android:padding="12dp"
             android:src="@android:drawable/ic_media_previous"
-            app:tint="#808080"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="#808080" />
 
-        <!-- Screen title: "Create Meal Plan" -->
         <TextView
             android:id="@+id/tvScreenTitle"
             android:layout_width="0dp"
@@ -91,7 +80,6 @@
             app:layout_constraintStart_toEndOf="@id/btnBack"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <!-- Subtitle / helper text below the title -->
         <TextView
             android:id="@+id/tvScreenSubtitle"
             android:layout_width="0dp"
@@ -107,7 +95,6 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tvScreenTitle" />
 
-        <!-- Amber accent line beneath the header -->
         <View
             android:id="@+id/viewHeaderAccent"
             android:layout_width="40dp"
@@ -120,9 +107,6 @@
 
         <!-- ═══════════════════════════════════════════════════
              FORM CARD
-             All input fields live inside a MaterialCardView so they
-             sit on a slightly elevated surface (#1A1A1A) against the
-             pure-black background — gives depth without heavy shadows.
              ═══════════════════════════════════════════════════ -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardForm"
@@ -149,7 +133,7 @@
                 android:paddingEnd="20dp"
                 android:paddingBottom="24dp">
 
-                <!-- ── FIELD LABEL: Category ──────────────────── -->
+                <!-- ── MEAL CATEGORY ──────────────────────────── -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -161,16 +145,8 @@
                     android:textSize="10sp" />
 
                 <!--
-                    PLAN TITLE / CATEGORY — ExposedDropdownMenu style
-                    Displays a dropdown for: Breakfast, Brunch, Lunch, Dinner, Snack.
-                    ID: etPlanTitle  (the inner AutoCompleteTextView)
-
-                    In Java:
-                      String[] categories = {"Breakfast","Brunch","Lunch","Dinner","Snack"};
-                      ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
-                          R.layout.list_item_dropdown, categories);
-                      AutoCompleteTextView dropdown = findViewById(R.id.etPlanTitle);
-                      dropdown.setAdapter(adapter);
+                    FIX 1 APPLIED: removed app:boxStrokeColorStateList
+                    REPLACED WITH: app:boxStrokeColor="#FFC107"
                 -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilPlanTitle"
@@ -183,16 +159,11 @@
                     app:boxCornerRadiusBottomStart="12dp"
                     app:boxCornerRadiusTopEnd="12dp"
                     app:boxCornerRadiusTopStart="12dp"
-                    app:boxStrokeColor="#3A3A3A"
-                    app:boxStrokeColorStateList="@color/til_stroke_selector"
+                    app:boxStrokeColor="#FFC107"
                     app:hintTextColor="#808080"
                     app:startIconDrawable="@android:drawable/ic_menu_today"
                     app:startIconTint="#505050">
 
-                    <!--
-                        AutoCompleteTextView is REQUIRED for ExposedDropdownMenu.
-                        Do NOT use EditText here — the dropdown won't work.
-                    -->
                     <AutoCompleteTextView
                         android:id="@+id/etPlanTitle"
                         android:layout_width="match_parent"
@@ -208,12 +179,11 @@
 
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- ── SPACER ──────────────────────────────────── -->
                 <Space
                     android:layout_width="match_parent"
                     android:layout_height="20dp" />
 
-                <!-- ── FIELD LABEL: Meal Name ─────────────────── -->
+                <!-- ── MEAL NAME ───────────────────────────────── -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -225,8 +195,10 @@
                     android:textSize="10sp" />
 
                 <!--
-                    MEAL NAME — free-text input
-                    ID: etMealName  (the inner EditText)
+                    FIX 1 APPLIED: removed app:boxStrokeColorStateList
+                    FIX 2 APPLIED: counterTextColor now uses @color/counter_normal
+                    FIX 3 APPLIED: counterOverflowTextColor now uses @color/counter_overflow
+                    (Add both to res/values/colors.xml — see note at bottom of file)
                 -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilMealName"
@@ -239,12 +211,11 @@
                     app:boxCornerRadiusBottomStart="12dp"
                     app:boxCornerRadiusTopEnd="12dp"
                     app:boxCornerRadiusTopStart="12dp"
-                    app:boxStrokeColor="#3A3A3A"
-                    app:boxStrokeColorStateList="@color/til_stroke_selector"
+                    app:boxStrokeColor="#FFC107"
                     app:counterEnabled="true"
                     app:counterMaxLength="60"
-                    app:counterTextColor="#505050"
-                    app:counterOverflowTextColor="#CF6679"
+                    app:counterTextColor="@color/counter_normal"
+                    app:counterOverflowTextColor="@color/counter_overflow"
                     app:hintTextColor="#808080"
                     app:startIconDrawable="@android:drawable/ic_menu_edit"
                     app:startIconTint="#505050">
@@ -263,12 +234,11 @@
 
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- ── SPACER ──────────────────────────────────── -->
                 <Space
                     android:layout_width="match_parent"
                     android:layout_height="20dp" />
 
-                <!-- ── FIELD LABEL: Cost ──────────────────────── -->
+                <!-- ── COST / PRICE ────────────────────────────── -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -280,9 +250,8 @@
                     android:textSize="10sp" />
 
                 <!--
-                    COST / PRICE — numeric decimal input
-                    The prefix "₱" is displayed as a persistent start-text.
-                    ID: etMealCost  (the inner EditText)
+                    FIX 1 APPLIED: removed app:boxStrokeColorStateList
+                    REPLACED WITH: app:boxStrokeColor="#FFC107"
                 -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilMealCost"
@@ -295,8 +264,7 @@
                     app:boxCornerRadiusBottomStart="12dp"
                     app:boxCornerRadiusTopEnd="12dp"
                     app:boxCornerRadiusTopStart="12dp"
-                    app:boxStrokeColor="#3A3A3A"
-                    app:boxStrokeColorStateList="@color/til_stroke_selector"
+                    app:boxStrokeColor="#FFC107"
                     app:hintTextColor="#808080"
                     app:prefixText="₱ "
                     app:prefixTextColor="#FFC107"
@@ -317,12 +285,10 @@
 
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- ── SPACER ──────────────────────────────────── -->
                 <Space
                     android:layout_width="match_parent"
                     android:layout_height="8dp" />
 
-                <!-- ── HELPER TEXT: cost guidance ─────────────── -->
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -333,7 +299,6 @@
                     android:textColor="#404040"
                     android:textSize="11sp" />
 
-                <!-- ── DIVIDER ─────────────────────────────────── -->
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
@@ -341,14 +306,7 @@
                     android:layout_marginBottom="16dp"
                     android:background="#252525" />
 
-                <!-- ═══════════════════════════════════════════════
-                     MEAL TYPE CHECKBOX
-                     Amber tint via app:buttonTint — requires the
-                     checkmark to still be visible on dark backgrounds.
-                     ID: cbIsHomemade
-                     ═══════════════════════════════════════════════ -->
-
-                <!-- Label above the checkbox row -->
+                <!-- ── MEAL TYPE CHECKBOX ──────────────────────── -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -359,7 +317,6 @@
                     android:textColor="#FFC107"
                     android:textSize="10sp" />
 
-                <!-- Checkbox row container -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -371,19 +328,21 @@
                     android:paddingEnd="16dp"
                     android:paddingBottom="14dp">
 
-                    <!-- Amber-tinted checkbox -->
+                    <!--
+                        FIX 4 APPLIED:
+                          REMOVED android:button="@null"
+                          REMOVED android:buttonCompat="@null"     ← invalid namespace
+                          REMOVED app:buttonCompat="@drawable/cb_homemade_selector"  ← file missing
+                          KEPT    app:buttonTint="#FFC107"          ← tints default checkbox amber
+                    -->
                     <CheckBox
                         android:id="@+id/cbIsHomemade"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:button="@null"
-                        android:buttonCompat="@null"
                         android:checked="false"
                         android:contentDescription="Mark meal as homemade"
-                        app:buttonCompat="@drawable/cb_homemade_selector"
                         app:buttonTint="#FFC107" />
 
-                    <!-- Labels beside the checkbox -->
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -410,7 +369,6 @@
 
                     </LinearLayout>
 
-                    <!-- Amber pill badge that appears when checked (toggle via Java) -->
                     <TextView
                         android:id="@+id/tvHomemadeBadge"
                         android:layout_width="wrap_content"
@@ -431,16 +389,11 @@
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
-        <!-- END cardForm -->
 
         <!-- ═══════════════════════════════════════════════════
-             SUBMISSION BUTTONS
-             Pinned below the form card.
-             btnSavePlan  — primary, amber fill, dark text
-             btnCancelPlan — ghost/text style
+             BUTTONS
              ═══════════════════════════════════════════════════ -->
 
-        <!-- PRIMARY: Save Plan -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSavePlan"
             android:layout_width="0dp"
@@ -465,7 +418,6 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/cardForm" />
 
-        <!-- SECONDARY: Cancel — outlined ghost button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCancelPlan"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
@@ -491,25 +443,21 @@
 
     <!--
         ════════════════════════════════════════════════════════════════════════
-        COMPANION FILES YOU MUST CREATE
+        ONE REQUIRED CHANGE IN res/values/colors.xml
+        ════════════════════════════════════════════════════════════════════════
+        Add these two lines inside your existing <resources> block:
+
+            <color name="counter_normal">#505050</color>
+            <color name="counter_overflow">#CF6679</color>
+
+        These are referenced by app:counterTextColor and app:counterOverflowTextColor
+        on tilMealName. Those attributes only accept @color references, not raw hex.
         ════════════════════════════════════════════════════════════════════════
 
-        ① res/color/til_stroke_selector.xml
-        ────────────────────────────────────
-        Controls the TextInputLayout outline colour (focused = amber, else dark).
+        COMPANION DRAWABLE FILES (create if not already done):
+        ════════════════════════════════════════════════════════════════════════
 
-        <?xml version="1.0" encoding="utf-8"?>
-        <selector xmlns:android="http://schemas.android.com/apk/res/android">
-            <item android:color="#FFC107" android:state_focused="true" />
-            <item android:color="#CF6679" android:state_hovered="true" />
-            <item android:color="#3A3A3A" />
-        </selector>
-
-
-        ② res/drawable/bg_checkbox_row.xml
-        ────────────────────────────────────
-        Rounded dark surface for the checkbox container.
-
+        ① res/drawable/bg_checkbox_row.xml
         <?xml version="1.0" encoding="utf-8"?>
         <shape xmlns:android="http://schemas.android.com/apk/res/android">
             <solid android:color="#222222" />
@@ -517,22 +465,14 @@
             <stroke android:width="1dp" android:color="#2A2A2A" />
         </shape>
 
-
-        ③ res/drawable/bg_badge_amber.xml
-        ───────────────────────────────────
-        Pill background for the "🏠 Home" badge.
-
+        ② res/drawable/bg_badge_amber.xml
         <?xml version="1.0" encoding="utf-8"?>
         <shape xmlns:android="http://schemas.android.com/apk/res/android">
             <solid android:color="#FFC107" />
             <corners android:radius="20dp" />
         </shape>
 
-        ⑤ res/layout/list_item_dropdown.xml
-        ─────────────────────────────────────
-        Required by the ExposedDropdownMenu ArrayAdapter.
-        Create via: File > New > Layout Resource File (root: TextView)
-
+        ③ res/layout/list_item_dropdown.xml
         <?xml version="1.0" encoding="utf-8"?>
         <TextView xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -542,56 +482,5 @@
             android:textSize="15sp"
             android:background="#1A1A1A"
             android:fontFamily="sans-serif" />
-
-
-        ⑥ AndroidManifest.xml — AddPlanActivity entry
-        ────────────────────────────────────────────────
-        <activity
-            android:name=".AddPlanActivity"
-            android:windowSoftInputMode="adjustResize"
-            android:exported="false" />
-
-        adjustResize tells the OS to shrink the ScrollView when the keyboard
-        opens, rather than pushing content off-screen.
-
-
-        ════════════════════════════════════════════════════════════════════════
-        JAVA WIRING CHEATSHEET (AddPlanActivity.java — Step 2)
-        ════════════════════════════════════════════════════════════════════════
-
-        // Dropdown setup
-        String[] categories = {"Breakfast", "Brunch", "Lunch", "Dinner", "Snack"};
-        ArrayAdapter<String> catAdapter = new ArrayAdapter<>(this,
-                R.layout.list_item_dropdown, categories);
-        AutoCompleteTextView etPlanTitle = findViewById(R.id.etPlanTitle);
-        etPlanTitle.setAdapter(catAdapter);
-
-        // Checkbox → toggle badge visibility
-        CheckBox cbHomemade   = findViewById(R.id.cbIsHomemade);
-        TextView tvBadge      = findViewById(R.id.tvHomemadeBadge);
-        cbHomemade.setOnCheckedChangeListener((btn, isChecked) ->
-                tvBadge.setVisibility(isChecked ? View.VISIBLE : View.GONE));
-
-        // Save button validation
-        MaterialButton btnSave = findViewById(R.id.btnSavePlan);
-        btnSave.setOnClickListener(v -> {
-            String category = etPlanTitle.getText().toString().trim();
-            String name     = ((TextInputEditText) findViewById(R.id.etMealName))
-                                  .getText().toString().trim();
-            String costStr  = ((TextInputEditText) findViewById(R.id.etMealCost))
-                                  .getText().toString().trim();
-
-            if (category.isEmpty()) { tilPlanTitle.setError("Please select a category."); return; }
-            if (name.isEmpty())     { tilMealName.setError("Meal name is required."); return; }
-            if (costStr.isEmpty())  { tilMealCost.setError("Please enter a cost."); return; }
-
-            double cost = Double.parseDouble(costStr);
-            boolean homemade = cbHomemade.isChecked();
-            Meal newMeal = new Meal(name, cost, homemade);
-            // → Save to DB / pass back via Intent
-        });
-
-        // Cancel button
-        findViewById(R.id.btnCancelPlan).setOnClickListener(v -> finish());
         ════════════════════════════════════════════════════════════════════════
     -->

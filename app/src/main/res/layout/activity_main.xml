@@ -121,23 +121,10 @@
                 android:includeFontPadding="false"
                 app:layout_constraintTop_toBottomOf="@id/tvBudgetLabel"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toStartOf="@id/ivBudgetIcon"
+                app:layout_constraintEnd_toEndOf="parent"
                 tools:ignore="HardcodedText" />
 
-            <!-- Decorative budget icon on the right -->
-            <ImageView
-                android:id="@+id/ivBudgetIcon"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@android:drawable/ic_dialog_info"
-                app:tint="#FFC107"
-                android:alpha="0.25"
-                android:contentDescription="Budget icon"
-                app:layout_constraintTop_toTopOf="@id/tvRemainingBudget"
-                app:layout_constraintBottom_toBottomOf="@id/tvRemainingBudget"
-                app:layout_constraintEnd_toEndOf="parent" />
-
-            <!-- Budget status chip (e.g., "On Track" or "Over Budget") -->
+            <!-- Tappable chip — opens the set-budget dialog -->
             <com.google.android.material.chip.Chip
                 android:id="@+id/chipBudgetStatus"
                 android:layout_width="wrap_content"
@@ -146,10 +133,12 @@
                 android:text="Set a budget to get started"
                 android:textColor="#A0A0A0"
                 android:textSize="11sp"
+                android:clickable="true"
+                android:focusable="true"
                 app:chipBackgroundColor="#252525"
-                app:chipStrokeColor="#333333"
+                app:chipStrokeColor="#FFC107"
                 app:chipStrokeWidth="1dp"
-                app:chipIconTint="#808080"
+                app:rippleColor="#33FFC107"
                 app:closeIconVisible="false"
                 app:layout_constraintTop_toBottomOf="@id/tvRemainingBudget"
                 app:layout_constraintStart_toStartOf="parent" />
@@ -304,60 +293,3 @@
         app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <!--
-        ════════════════════════════════════════════════════════════════════
-        ADDITIONAL FILES NEEDED — Create these in your project:
-        ════════════════════════════════════════════════════════════════════
-
-        1.  res/drawable/bottom_nav_icon_selector.xml
-            ────────────────────────────────────────
-            <?xml version="1.0" encoding="utf-8"?>
-            <selector xmlns:android="http://schemas.android.com/apk/res/android">
-                <item android:color="#FFC107" android:state_checked="true" />
-                <item android:color="#505050" />
-            </selector>
-
-        2.  res/drawable/bottom_nav_text_selector.xml
-            ─────────────────────────────────────────
-            <?xml version="1.0" encoding="utf-8"?>
-            <selector xmlns:android="http://schemas.android.com/apk/res/android">
-                <item android:color="#FFC107" android:state_checked="true" />
-                <item android:color="#505050" />
-            </selector>
-
-        3.  res/drawable/gradient_top_fade.xml
-            ────────────────────────────────────
-            <?xml version="1.0" encoding="utf-8"?>
-            <shape xmlns:android="http://schemas.android.com/apk/res/android">
-                <gradient
-                    android:startColor="#0D0D0D"
-                    android:endColor="#000D0D0D"
-                    android:angle="270" />
-            </shape>
-
-        4.  res/layout/item_meal.xml
-            ─────────────────────────
-            A card-based row layout for each meal entry (Breakfast / Lunch / Dinner).
-            Suggested structure inside a MaterialCardView:
-              - ImageView  : meal-type icon (tinted amber)
-              - TextView   : meal type label (e.g., "Breakfast")
-              - TextView   : meal name / subtitle
-              - TextView   : cost (e.g., "P120.00")
-              - ImageButton: overflow / edit menu
-
-        5.  Vector icons (via Resource Manager > Vector Asset):
-              ic_restaurant_menu  (for "Plan" nav item)
-              ic_archive          (for "Past Records" nav item)
-
-        ════════════════════════════════════════════════════════════════════
-        SHOWING / HIDING EMPTY STATE (MainActivity.kt / .java snippet):
-        ════════════════════════════════════════════════════════════════════
-
-            fun updateEmptyState(isEmpty: Boolean) {
-                binding.recyclerMeals.visibility   = if (isEmpty) View.GONE  else View.VISIBLE
-                binding.layoutEmptyState.visibility = if (isEmpty) View.VISIBLE else View.GONE
-            }
-
-        ════════════════════════════════════════════════════════════════════
-    -->

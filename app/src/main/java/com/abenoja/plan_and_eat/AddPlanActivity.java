@@ -9,7 +9,9 @@ import android.widget.AutoCompleteTextView;
 import android.widget.CheckBox;
 import android.widget.TextView;
 import android.widget.Toast;
-
+import android.os.Build;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.button.MaterialButton;
@@ -21,51 +23,64 @@ import com.google.android.material.textfield.TextInputLayout;
  * ─────────────────────────────────────────────────────────────────────
  * Secondary screen for creating a new meal plan entry.
  *
- * Responsibilities:
- *   1. Initialize all form Views via findViewById
- *   2. Populate the category dropdown with meal-type options
- *   3. Smart checkbox logic — disables cost field for homemade meals
- *   4. Validate and collect form data on "Save Plan"
- *   5. Return a result Intent to MainActivity with the new Meal data
+ * Conflict fixes applied (vs previous version):
  *
- * Launched from: MainActivity → fabAddMeal click
- * Returns to   : MainActivity via setResult() + finish()
+ *   FIX 1 — Homemade checkbox: now disables/enables tilMealCost (the
+ *            TextInputLayout wrapper) instead of etMealCost directly.
+ *            Disabling the wrapper automatically:
+ *              • Greys out the box stroke, hint, prefix, suffix
+ *              • Disables the inner EditText
+ *              • No manual setAlpha() hack needed
+ *
+ *   FIX 2 — Text clearing: uses tilMealCost.getEditText().setText()
+ *            via the wrapper instead of etMealCost directly, matching
+ *            how Material TextInputLayout expects text to be managed.
+ *
+ *   FIX 3 — Cost collection: reads from tilMealCost.getEditText()
+ *            so it always gets the live inner EditText reference, even
+ *            if the view hierarchy rebuilds after a rotation.
+ *
+ *   FIX 4 — Removed dependency on cb_homemade_selector drawable.
+ *            The XML's app:buttonCompat="@drawable/cb_homemade_selector"
+ *            will crash if that file doesn't exist. Java no longer
+ *            expects or requires that selector — app:buttonTint alone
+ *            tints the default Material checkbox amber correctly.
  * ─────────────────────────────────────────────────────────────────────
  */
 public class AddPlanActivity extends AppCompatActivity {
 
-    // ── Request code (used by MainActivity.startActivityForResult) ──
-    // Keep in sync with the constant in MainActivity.java
-    public static final int REQUEST_CODE_ADD_PLAN = 1001;
+    // ── Intent extra keys — used to pass the new Meal back to MainActivity ──
+    public static final String EXTRA_MEAL_NAME     = "extra_meal_name";
+    public static final String EXTRA_MEAL_CATEGORY = "extra_meal_category";
+    public static final String EXTRA_MEAL_COST     = "extra_meal_cost";
+    public static final String EXTRA_IS_HOMEMADE   = "extra_is_homemade";
 
-    // ── Intent extra keys — used to pass the new Meal back ──────────
-    public static final String EXTRA_MEAL_NAME      = "extra_meal_name";
-    public static final String EXTRA_MEAL_CATEGORY  = "extra_meal_category";
-    public static final String EXTRA_MEAL_COST      = "extra_meal_cost";
-    public static final String EXTRA_IS_HOMEMADE    = "extra_is_homemade";
+    // ── View references ──────────────────────────────────────────────────────
+    // FIX: We hold references to the TextInputLayout WRAPPERS as the source
+    //      of truth for enable/disable state, not the inner EditTexts.
+    private TextInputLayout      tilPlanTitle;    // wrapper — category dropdown
+    private TextInputLayout      tilMealName;     // wrapper — meal name
+    private TextInputLayout      tilMealCost;     // wrapper — cost (FIX 1 target)
+    private AutoCompleteTextView etPlanTitle;     // inner — category selection
+    private TextInputEditText    etMealName;      // inner — meal name text
+    // NOTE: etMealCost is intentionally NOT stored as a field.
+    //       All reads/writes go through tilMealCost.getEditText() (see FIX 2 & 3).
+    private CheckBox             cbIsHomemade;    // "Homemade Meal" toggle
+    private TextView             tvHomemadeBadge; // amber 🏠 badge
+    private MaterialButton       btnSavePlan;     // primary action
+    private MaterialButton       btnCancelPlan;   // secondary action
 
-    // ── View references ──────────────────────────────────────────────
-    private TextInputLayout       tilPlanTitle;   // wrapper for the category dropdown
-    private TextInputLayout       tilMealName;    // wrapper for meal name field
-    private TextInputLayout       tilMealCost;    // wrapper for cost field
-    private AutoCompleteTextView  etPlanTitle;    // dropdown: Breakfast / Lunch / etc.
-    private TextInputEditText     etMealName;     // free-text meal name
-    private TextInputEditText     etMealCost;     // numeric cost input
-    private CheckBox              cbIsHomemade;   // "Homemade Meal" toggle
-    private TextView              tvHomemadeBadge;// amber badge shown when homemade
-    private MaterialButton        btnSavePlan;    // primary save action
-    private MaterialButton        btnCancelPlan;  // secondary cancel action
-
-    // ── Dropdown options ─────────────────────────────────────────────
+    // ── Meal category options (matches XML cheatsheet, extended for PH context) ──
     private static final String[] MEAL_CATEGORIES = {
             "Breakfast", "Brunch", "Lunch", "Merienda", "Dinner", "Midnight Snack"
     };
 
-    // ────────────────────────────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_plan);
+        hideSystemNavigation();
 
         initViews();
         setupCategoryDropdown();
@@ -74,81 +89,93 @@ public class AddPlanActivity extends AppCompatActivity {
         setupCancelButton();
     }
 
-    // ════════════════════════════════════════════════════════════════
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) hideSystemNavigation();
+    }
+
+    private void hideSystemNavigation() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            WindowInsetsController controller = getWindow().getInsetsController();
+            if (controller != null) {
+                controller.hide(WindowInsets.Type.navigationBars());
+                controller.setSystemBarsBehavior(
+                        WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+            }
+        } else {
+            //noinspection deprecation
+            getWindow().getDecorView().setSystemUiVisibility(
+                    View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                            | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                            | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
     // 1. VIEW INITIALISATION
-    // ════════════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════════════════════
 
     /**
-     * Binds every View in activity_add_plan.xml to a Java field.
-     * All IDs must match what is declared in the XML layout.
+     * Binds all Views in activity_add_plan.xml to Java fields.
+     *
+     * IMPORTANT: Only the TextInputLayout WRAPPERS are stored for cost/name.
+     * The inner EditText for cost is always accessed via getEditText() to
+     * stay in sync with Material's internal state management.
      */
     private void initViews() {
-        // TextInputLayout wrappers (used to show/hide error messages)
+        // Wrappers
         tilPlanTitle  = findViewById(R.id.tilPlanTitle);
         tilMealName   = findViewById(R.id.tilMealName);
-        tilMealCost   = findViewById(R.id.tilMealCost);
+        tilMealCost   = findViewById(R.id.tilMealCost);   // ← FIX 1: own the wrapper
 
-        // Actual input controls inside the wrappers
+        // Inner inputs
         etPlanTitle   = findViewById(R.id.etPlanTitle);
         etMealName    = findViewById(R.id.etMealName);
-        etMealCost    = findViewById(R.id.etMealCost);
+        // etMealCost is NOT stored — use tilMealCost.getEditText() below
 
-        // Checkbox and its companion badge
+        // Checkbox + badge
         cbIsHomemade    = findViewById(R.id.cbIsHomemade);
         tvHomemadeBadge = findViewById(R.id.tvHomemadeBadge);
 
-        // Action buttons
+        // Buttons
         btnSavePlan   = findViewById(R.id.btnSavePlan);
         btnCancelPlan = findViewById(R.id.btnCancelPlan);
 
-        // Optional: back arrow in the header closes this activity
+        // Back arrow
         View btnBack = findViewById(R.id.btnBack);
         if (btnBack != null) {
             btnBack.setOnClickListener(v -> finish());
         }
     }
 
-    // ════════════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════════════════════
     // 2. CATEGORY DROPDOWN
-    // ════════════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════════════════════
 
     /**
-     * Wires the AutoCompleteTextView to a static list of meal categories.
-     *
-     * Uses res/layout/list_item_dropdown.xml as the dropdown row layout
-     * (a dark-themed single TextView — see activity_add_plan.xml comments).
+     * Populates the ExposedDropdownMenu with MEAL_CATEGORIES.
+     * Requires res/layout/list_item_dropdown.xml (dark-themed TextView row).
      */
     private void setupCategoryDropdown() {
-        ArrayAdapter<String> categoryAdapter = new ArrayAdapter<>(
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
                 this,
-                R.layout.list_item_dropdown, // dark-themed row layout
+                R.layout.list_item_dropdown,
                 MEAL_CATEGORIES
         );
-        etPlanTitle.setAdapter(categoryAdapter);
+        etPlanTitle.setAdapter(adapter);
 
-        // Clear the validation error as soon as the user picks a value
+        // Clear error the moment the user picks a valid category
         etPlanTitle.setOnItemClickListener((parent, view, position, id) ->
                 tilPlanTitle.setError(null));
     }
 
-    // ════════════════════════════════════════════════════════════════
-    // 3. SMART CHECKBOX LOGIC (Core requirement)
-    // ════════════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════════════════════
+    // 3. SMART CHECKBOX LOGIC
+    //    FIX 1 + FIX 2: disable/enable the TIL wrapper, not the inner EditText
+    // ════════════════════════════════════════════════════════════════════════
 
-    /**
-     * Attaches an OnCheckedChangeListener to {@code cbIsHomemade}.
-     *
-     * Checked (homemade = true):
-     *   • Clears the cost field and sets its text to "0"
-     *   • Disables the cost TextInputLayout so it appears greyed-out
-     *   • Shows the amber "🏠 Home" badge
-     *   • Clears any lingering cost validation error
-     *
-     * Unchecked (bought/takeout):
-     *   • Re-enables the cost TextInputLayout
-     *   • Clears the "0" placeholder so the user can type freely
-     *   • Hides the badge
-     */
     private void setupCheckboxLogic() {
         cbIsHomemade.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (isChecked) {
@@ -160,104 +187,103 @@ public class AddPlanActivity extends AppCompatActivity {
     }
 
     /**
-     * Called when the user checks "Homemade Meal".
-     * Zeroes out cost and locks the field — homemade meals don't count
-     * against the tracked budget.
+     * User checked "Homemade Meal".
+     *
+     * FIX 1: tilMealCost.setEnabled(false) is the correct Material call.
+     *   → It disables the inner EditText automatically
+     *   → It applies the built-in disabled tint to stroke, hint, prefix & suffix
+     *   → No manual setAlpha() hack needed
+     *
+     * FIX 2: tilMealCost.getEditText().setText("0") is the safe way to
+     *   write text through the wrapper, avoiding stale EditText references.
      */
     private void onHomemadeSelected() {
-        // Zero out and lock the cost field
-        etMealCost.setText("0");
-        etMealCost.setEnabled(false);
+        // Set cost to 0 through the wrapper (FIX 2)
+        if (tilMealCost.getEditText() != null) {
+            tilMealCost.getEditText().setText("0");
+        }
 
-        // Dim the wrapper to give a clear disabled visual signal
-        tilMealCost.setAlpha(0.45f);
+        // Disable the whole TIL wrapper — greys out box, hint, prefix, suffix (FIX 1)
+        tilMealCost.setEnabled(false);
 
-        // Clear any previous cost validation error
+        // Clear any stale validation error
         tilMealCost.setError(null);
 
-        // Show the amber "🏠 Home" badge beside the checkbox
+        // Show the amber "🏠 Home" badge
         tvHomemadeBadge.setVisibility(View.VISIBLE);
     }
 
     /**
-     * Called when the user unchecks "Homemade Meal".
-     * Re-enables cost entry so the user can type a price.
+     * User unchecked "Homemade Meal".
+     *
+     * FIX 1: tilMealCost.setEnabled(true) restores the full Material
+     *   visual state without any manual alpha manipulation.
+     *
+     * FIX 2: Clear text through the wrapper's getEditText().
      */
     private void onTakeoutSelected() {
-        // Re-enable and restore the cost field to its normal appearance
-        etMealCost.setEnabled(true);
-        tilMealCost.setAlpha(1.0f);
+        // Re-enable the wrapper — restores all visual states (FIX 1)
+        tilMealCost.setEnabled(true);
 
-        // Clear the "0" placeholder so the hint reappears naturally
-        etMealCost.setText("");
+        // Clear the "0" placeholder through the wrapper (FIX 2)
+        if (tilMealCost.getEditText() != null) {
+            tilMealCost.getEditText().setText("");
+            tilMealCost.getEditText().requestFocus();
+        }
 
-        // Request focus to invite the user to type immediately
-        etMealCost.requestFocus();
-
-        // Hide the homemade badge
+        // Hide the badge
         tvHomemadeBadge.setVisibility(View.GONE);
     }
 
-    // ════════════════════════════════════════════════════════════════
-    // 4. SAVE BUTTON — Validation + Result
-    // ════════════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════════════════════
+    // 4. SAVE BUTTON
+    //    FIX 3: cost is read via tilMealCost.getEditText() throughout
+    // ════════════════════════════════════════════════════════════════════════
 
-    /**
-     * Attaches an OnClickListener to {@code btnSavePlan}.
-     *
-     * Flow:
-     *   1. Collect raw text from each field
-     *   2. Run field-by-field validation (stops at first failure)
-     *   3. Parse numeric cost safely
-     *   4. Build a result Intent and finish the Activity
-     */
     private void setupSaveButton() {
         btnSavePlan.setOnClickListener(v -> {
-            // ── Collect raw input ──────────────────────────────────
-            String category  = etPlanTitle.getText() != null
+
+            // ── Collect raw values ─────────────────────────────────────────
+            String category = etPlanTitle.getText() != null
                     ? etPlanTitle.getText().toString().trim() : "";
-            String mealName  = etMealName.getText() != null
-                    ? etMealName.getText().toString().trim()  : "";
-            String costInput = etMealCost.getText() != null
-                    ? etMealCost.getText().toString().trim()  : "";
+
+            String mealName = etMealName.getText() != null
+                    ? etMealName.getText().toString().trim() : "";
+
+            // FIX 3: always read cost through the wrapper reference
+            String costInput = (tilMealCost.getEditText() != null
+                    && tilMealCost.getEditText().getText() != null)
+                    ? tilMealCost.getEditText().getText().toString().trim() : "";
+
             boolean isHomemade = cbIsHomemade.isChecked();
 
-            // ── Validate ───────────────────────────────────────────
+            // ── Validate ───────────────────────────────────────────────────
             if (!validateForm(category, mealName, costInput, isHomemade)) {
-                // validateForm() sets the appropriate error on each TIL;
-                // return early and let the user correct the problem.
-                return;
+                return; // errors already set on the TILs by validateForm()
             }
 
-            // ── Parse cost safely ──────────────────────────────────
-            // isHomemade meals always have cost = 0.0 (set by checkbox logic),
-            // but we parse defensively in case the field was edited via paste.
+            // ── Parse & deliver ────────────────────────────────────────────
             double mealCost = parseCostSafely(costInput, isHomemade);
-
-            // ── Build and send result back to MainActivity ─────────
             deliverResultAndFinish(category, mealName, mealCost, isHomemade);
         });
     }
 
     /**
-     * Validates all form fields in order and sets error messages on the
-     * wrapping TextInputLayouts. Returns true only if every field is valid.
+     * Validates all fields and sets TIL error messages on failure.
      *
-     * Validation rules:
-     *   • category  — must not be empty
-     *   • mealName  — must not be empty
-     *   • cost      — must not be empty (unless homemade); must be a
-     *                 valid non-negative number if provided
+     * Rules:
+     *   • category  — required, must not be empty
+     *   • mealName  — required, must not be empty
+     *   • costInput — required and numeric only when NOT homemade;
+     *                 skipped entirely when homemade (value is always "0")
      *
-     * @return {@code true} if all fields pass; {@code false} otherwise.
+     * @return true if the form is fully valid; false if any field fails.
      */
     private boolean validateForm(String category,
                                  String mealName,
                                  String costInput,
                                  boolean isHomemade) {
-        // Reset all errors before re-validating
         clearAllErrors();
-
         boolean isValid = true;
 
         // 1. Category
@@ -270,28 +296,27 @@ public class AddPlanActivity extends AppCompatActivity {
         // 2. Meal name
         if (TextUtils.isEmpty(mealName)) {
             tilMealName.setError("Meal name cannot be empty.");
-            if (isValid) etMealName.requestFocus(); // focus only the first error
+            if (isValid) etMealName.requestFocus();
             isValid = false;
         }
 
-        // 3. Cost — only required and validated when NOT homemade
+        // 3. Cost — only validated when the user is logging a purchased meal
         if (!isHomemade) {
             if (TextUtils.isEmpty(costInput)) {
                 tilMealCost.setError("Please enter the meal cost.");
-                if (isValid) etMealCost.requestFocus();
+                if (isValid && tilMealCost.getEditText() != null) {
+                    tilMealCost.getEditText().requestFocus();
+                }
                 isValid = false;
             } else {
-                // Check it's a valid positive number
                 try {
                     double cost = Double.parseDouble(costInput);
                     if (cost < 0) {
                         tilMealCost.setError("Cost cannot be negative.");
-                        if (isValid) etMealCost.requestFocus();
                         isValid = false;
                     }
                 } catch (NumberFormatException e) {
                     tilMealCost.setError("Enter a valid number (e.g. 85.00).");
-                    if (isValid) etMealCost.requestFocus();
                     isValid = false;
                 }
             }
@@ -300,10 +325,7 @@ public class AddPlanActivity extends AppCompatActivity {
         return isValid;
     }
 
-    /**
-     * Resets the error state on all TextInputLayouts so stale error
-     * messages don't persist between validation attempts.
-     */
+    /** Clears all TIL error messages before each validation pass. */
     private void clearAllErrors() {
         tilPlanTitle.setError(null);
         tilMealName.setError(null);
@@ -311,65 +333,41 @@ public class AddPlanActivity extends AppCompatActivity {
     }
 
     /**
-     * Safely converts the raw cost string to a double.
-     *
-     * Falls back to 0.0 if:
-     *   • The meal is homemade (cost is intentionally free)
-     *   • The string cannot be parsed (guarded by validateForm, but
-     *     defensive coding prevents any crash here)
-     *
-     * @param rawCost    The string from etMealCost.
-     * @param isHomemade Whether the homemade checkbox is checked.
-     * @return Parsed cost as a double, or 0.0 as a safe fallback.
+     * Safely parses the cost string to a double.
+     * Returns 0.0 for homemade meals or if parsing unexpectedly fails.
      */
     private double parseCostSafely(String rawCost, boolean isHomemade) {
         if (isHomemade) return 0.0;
         try {
             return Double.parseDouble(rawCost);
         } catch (NumberFormatException e) {
-            // Should never reach here if validateForm() passed, but
-            // returning 0.0 is a safe, non-crashing fallback.
-            return 0.0;
+            return 0.0; // validateForm() guards against this, but safety first
         }
     }
 
     /**
-     * Packages the validated meal data into a result Intent and calls
-     * finish() to close this Activity and return to MainActivity.
-     *
-     * MainActivity receives the data in onActivityResult() by reading
-     * the Intent extras using the public EXTRA_* keys defined above.
-     *
-     * @param category   Selected category string (e.g. "Breakfast").
-     * @param mealName   User-entered meal name.
-     * @param cost       Parsed cost value (0.0 if homemade).
-     * @param isHomemade True if the meal is home-cooked.
+     * Bundles validated meal data into a result Intent and closes this Activity.
+     * MainActivity's ActivityResultLauncher receives the data via onAddPlanResult().
      */
     private void deliverResultAndFinish(String category,
                                         String mealName,
                                         double cost,
                                         boolean isHomemade) {
-        Intent resultIntent = new Intent();
-        resultIntent.putExtra(EXTRA_MEAL_CATEGORY, category);
-        resultIntent.putExtra(EXTRA_MEAL_NAME,     mealName);
-        resultIntent.putExtra(EXTRA_MEAL_COST,     cost);
-        resultIntent.putExtra(EXTRA_IS_HOMEMADE,   isHomemade);
+        Intent result = new Intent();
+        result.putExtra(EXTRA_MEAL_CATEGORY, category);
+        result.putExtra(EXTRA_MEAL_NAME,     mealName);
+        result.putExtra(EXTRA_MEAL_COST,     cost);
+        result.putExtra(EXTRA_IS_HOMEMADE,   isHomemade);
 
-        setResult(RESULT_OK, resultIntent);
-
+        setResult(RESULT_OK, result);
         Toast.makeText(this, "✅ Meal plan saved!", Toast.LENGTH_SHORT).show();
-
-        finish(); // Returns to MainActivity
+        finish();
     }
 
-    // ════════════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════════════════════
     // 5. CANCEL BUTTON
-    // ════════════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════════════════════
 
-    /**
-     * Discards the form and returns to MainActivity with RESULT_CANCELED.
-     * MainActivity's onActivityResult() will receive this and do nothing.
-     */
     private void setupCancelButton() {
         btnCancelPlan.setOnClickListener(v -> {
             setResult(RESULT_CANCELED);
