@@ -40,6 +40,7 @@ public class MainActivity extends AppCompatActivity {
     // ── Views ─────────────────────────────────────────────────────────
     private RecyclerView         recyclerMeals;
     private FloatingActionButton fabAddMeal;
+    private FloatingActionButton fabCoinFlip;
     private BottomNavigationView bottomNavigationView;
     private TextView             tvRemainingBudget;
     private TextView             tvDate;
@@ -131,6 +132,7 @@ public class MainActivity extends AppCompatActivity {
     private void initViews() {
         recyclerMeals        = findViewById(R.id.recyclerMeals);
         fabAddMeal           = findViewById(R.id.fabAddMeal);
+        fabCoinFlip          = findViewById(R.id.fabCoinFlip);
         bottomNavigationView = findViewById(R.id.bottomNavigationView);
         tvRemainingBudget    = findViewById(R.id.tvRemainingBudget);
         tvDate               = findViewById(R.id.tvDate);
@@ -228,6 +230,9 @@ public class MainActivity extends AppCompatActivity {
     // ════════════════════════════════════════════════════════════════
 
     private void setupFab() {
+        fabCoinFlip.setOnClickListener(v ->
+                CoinFlipDialogFragment.show(getSupportFragmentManager()));
+
         fabAddMeal.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, AddPlanActivity.class);
             addPlanLauncher.launch(intent);
