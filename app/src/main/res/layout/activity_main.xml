@@ -1,21 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-    res/layout/activity_main.xml
-    Main Dashboard Layout for "Plan and Eat"
-    ─────────────────────────────────────────
-    Design system:
-      • Root:            ConstraintLayout (full-screen)
-      • Theme:           Dark mode — #0D0D0D background, #FFFFFF / #B0B0B0 text
-      • Accent:          Amber/Yellow (#FFC107) for FAB and key highlights
-      • Typography:      Relies on Material TextAppearance styles
-      • Sections:        Header card → RecyclerView / Empty state → BottomNav + FAB
-    ─────────────────────────────────────────
-    Dependencies required in build.gradle (app):
-      implementation 'com.google.android.material:material:<latest>'
-    ─────────────────────────────────────────
-    In your Activity, set the window / status-bar colour programmatically or via
-    the app theme (recommended: Theme.Material3.DayNight or a custom dark variant).
--->
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -204,7 +187,6 @@
         app:layout_constraintEnd_toEndOf="parent"
         tools:visibility="gone">
 
-        <!-- Illustrative empty-state icon -->
         <ImageView
             android:id="@+id/ivEmptyIcon"
             android:layout_width="72dp"
@@ -214,7 +196,6 @@
             android:contentDescription="No meals illustration"
             android:layout_marginBottom="16dp" />
 
-        <!-- ★ PRIMARY empty state text -->
         <TextView
             android:id="@+id/tvEmptyState"
             android:layout_width="wrap_content"
@@ -225,7 +206,6 @@
             android:fontFamily="sans-serif-medium"
             android:gravity="center" />
 
-        <!-- Secondary empty state hint -->
         <TextView
             android:id="@+id/tvEmptyStateHint"
             android:layout_width="wrap_content"
@@ -242,11 +222,6 @@
     <!-- ══════════════════════════════════════════════════
          BOTTOM SECTION — BottomNavigationView
          ══════════════════════════════════════════════════ -->
-
-    <!-- ══════════════════════════════════════════════════
-         FAB — Floating Action Button (Add Meal)
-         Positioned above the BottomNav on the right side.
-         ══════════════════════════════════════════════════ -->
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottomNavigationView"
         android:layout_width="0dp"
@@ -262,6 +237,9 @@
         app:menu="@menu/menu_bottom_nav"
         tools:ignore="HardcodedColor" />
 
+    <!-- ══════════════════════════════════════════════════
+         FAB — Add Meal (right side)
+         ══════════════════════════════════════════════════ -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabAddMeal"
         android:layout_width="wrap_content"
@@ -277,6 +255,28 @@
         app:pressedTranslationZ="14dp"
         app:rippleColor="#FFCA28"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/bottomNavigationView" />
+
+    <!-- ══════════════════════════════════════════════════
+         MINI-FAB — Coin Flip (left of the add-meal FAB)
+         ══════════════════════════════════════════════════ -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabCoinFlip"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="20dp"
+        android:src="@drawable/ic_coin_heads"
+        android:contentDescription="Flip a coin"
+        app:backgroundTint="#1A1A1A"
+        app:tint="#FFC107"
+        app:fabSize="mini"
+        app:elevation="6dp"
+        app:pressedTranslationZ="10dp"
+        app:rippleColor="#33FFC107"
+        app:strokeColor="#FFC107"
+        app:strokeWidth="1dp"
+        app:layout_constraintEnd_toStartOf="@id/fabAddMeal"
         app:layout_constraintBottom_toTopOf="@id/bottomNavigationView" />
 
     <!-- ══════════════════════════════════════════════════
