@@ -69,7 +69,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             "CREATE TABLE " + TABLE_BUDGET + " ("
                     + COL_BUDGET_ID         + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                     + COL_BUDGET_DATE       + " TEXT    NOT NULL UNIQUE, "
-                    + COL_BUDGET_TOTAL      + " REAL    NOT NULL DEFAULT 500.0, "
+                    + COL_BUDGET_TOTAL      + " REAL    NOT NULL DEFAULT 0.0, "
                     + COL_BUDGET_CREATED_AT + " TEXT    NOT NULL"
                     + ");";
 
@@ -171,7 +171,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
         Cursor cursor = db.rawQuery(query, new String[]{ beforeDate });
 
-        double remaining = 500.00;
+        double remaining = 0.00;
         if (cursor.moveToFirst()) {
             double total = cursor.getDouble(0);
             double spent = cursor.getDouble(1);
@@ -222,7 +222,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 new String[]{ date },
                 null, null, null);
 
-        double budget = 500.00;
+        double budget = 0.00;
         if (cursor.moveToFirst()) {
             budget = cursor.getDouble(0);
         }
@@ -326,6 +326,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
         return meals;
     }
+    public List<MealRecord> getTodayMealRecords() {
+        return getMealsByDate(getToday());
+    }
 
     // ══════════════════════════════════════════════════════════════════
     // MEALS — UPDATE / DELETE
@@ -409,7 +412,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 new String[]{ date },
                 null, null, null);
 
-        summary.originalBudget = 500.00; // fallback
+        summary.originalBudget = 0.00; // fallback
         if (budgetCursor.moveToFirst()) {
             summary.originalBudget = budgetCursor.getDouble(0);
         }

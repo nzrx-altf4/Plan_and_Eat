@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    res/drawable/ic_coin_tails.xml
+    Dark coin — tails side (star symbol)
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+
+    <!-- Outer coin body (darker) -->
+    <path
+        android:fillColor="#B8860B"
+        android:pathData="M60,6 C30.7,6 7,29.7 7,59 C7,88.3 30.7,112 60,112 C89.3,112 113,88.3 113,59 C113,29.7 89.3,6 60,6 Z" />
+
+    <!-- Inner ring -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#8B6508"
+        android:strokeWidth="3"
+        android:pathData="M60,16 C36.2,16 17,35.2 17,59 C17,82.8 36.2,102 60,102 C83.8,102 103,82.8 103,59 C103,35.2 83.8,16 60,16 Z" />
+
+    <!-- Star shape for "Tails" -->
+    <!-- Star: 5 points, centered at 60,59 -->
+    <path
+        android:fillColor="#8B6508"
+        android:pathData="
+          M60,32
+          L65.9,50.2 L85,50.2
+          L70.5,61.6 L76.4,79.8
+          L60,68.4 L43.6,79.8
+          L49.5,61.6 L35,50.2
+          L54.1,50.2 Z" />
+
+</vector>

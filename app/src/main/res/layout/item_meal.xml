@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    res/layout/item_meal.xml  (updated — checkbox + overflow menu)
+    Replace the existing file entirely.
+-->
 <com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -18,19 +22,27 @@
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="16dp"
+        android:paddingStart="12dp"
         android:paddingTop="14dp"
-        android:paddingEnd="16dp"
+        android:paddingEnd="8dp"
         android:paddingBottom="14dp">
 
-        <!-- Meal info: name + type stacked vertically -->
+        <!-- ✅ Done checkbox -->
+        <CheckBox
+            android:id="@+id/cbMealDone"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="10dp"
+            android:buttonTint="#FFC107"
+            android:contentDescription="Mark as done" />
+
+        <!-- Meal info: name + type -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:orientation="vertical">
 
-            <!-- ★ Must match R.id.tvMealName in MealAdapter -->
             <TextView
                 android:id="@+id/tvMealName"
                 android:layout_width="wrap_content"
@@ -39,7 +51,6 @@
                 android:textColor="#FFFFFF"
                 android:textSize="15sp" />
 
-            <!-- ★ Must match R.id.tvMealType in MealAdapter -->
             <TextView
                 android:id="@+id/tvMealType"
                 android:layout_width="wrap_content"
@@ -51,14 +62,25 @@
 
         </LinearLayout>
 
-        <!-- ★ Must match R.id.tvMealCost in MealAdapter -->
+        <!-- Cost -->
         <TextView
             android:id="@+id/tvMealCost"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:fontFamily="sans-serif-medium"
             android:textColor="#FFC107"
-            android:textSize="14sp" />
+            android:textSize="14sp"
+            android:layout_marginEnd="4dp" />
+
+        <!-- ⋮ Overflow menu (edit / delete) — disabled when checked -->
+        <ImageButton
+            android:id="@+id/btnMealMenu"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_more"
+            android:contentDescription="Options"
+            app:tint="#606060" />
 
     </LinearLayout>
 
