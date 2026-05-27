@@ -24,6 +24,7 @@
             android:name=".AddPlanActivity"
             android:windowSoftInputMode="adjustResize"
             android:exported="false" />
+        <activity android:name=".ArchiveActivity" />
     </application>
 
 </manifest>

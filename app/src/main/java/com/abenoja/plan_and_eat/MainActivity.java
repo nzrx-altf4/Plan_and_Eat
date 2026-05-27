@@ -1,8 +1,10 @@
-package com.abenoja.plan_and_eat; // ← Change to your actual package name
+package com.abenoja.plan_and_eat;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.InputType;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -10,6 +12,7 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -24,26 +27,11 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * MainActivity.java  (updated — Step 2)
- * ─────────────────────────────────────────────────────────────────────
- * Changes from Step 1:
- *
- *   • fabAddMeal now launches AddPlanActivity via an Intent instead of
- *     showing an AlertDialog placeholder.
- *
- *   • Uses the modern ActivityResultLauncher API (replaces the deprecated
- *     startActivityForResult / onActivityResult pattern). This is the
- *     recommended, thread-safe approach from Jetpack Activity 1.2+.
- *
- *   • onAddPlanResult() reads the Meal extras from the result Intent and
- *     inserts the new Meal into the RecyclerView adapter.
- *
- *   • Budget is recalculated and displayed after every successful save.
- * ─────────────────────────────────────────────────────────────────────
+ * MainActivity.java  (v3 — set budget dialog + archive navigation)
  */
 public class MainActivity extends AppCompatActivity {
 
-    // ── View references ───────────────────────────────────────────────
+    // ── Views ─────────────────────────────────────────────────────────
     private RecyclerView         recyclerMeals;
     private FloatingActionButton fabAddMeal;
     private BottomNavigationView bottomNavigationView;
@@ -51,32 +39,18 @@ public class MainActivity extends AppCompatActivity {
     private TextView             tvDate;
     private LinearLayout         layoutEmptyState;
 
-    // ── Data & Adapter ────────────────────────────────────────────────
+    // ── Data ──────────────────────────────────────────────────────────
     private MealAdapter mealAdapter;
     private List<Meal>  mealList;
 
-    // ── Budget state ──────────────────────────────────────────────────
-    // In a later step this will come from SharedPreferences / a database.
-    // For now it is a static starting value for UI testing.
-    private double totalBudget = 500.00; // user's set budget (placeholder)
-    private double spentSoFar  = 0.00;   // sum of all non-homemade meal costs
+    // ── Database ──────────────────────────────────────────────────────
+    private DatabaseHelper db;
 
-    // ── ActivityResultLauncher ────────────────────────────────────────
-    /**
-     * Modern replacement for startActivityForResult().
-     *
-     * Register the launcher BEFORE onCreate() runs (field-level or in
-     * onCreate before setContentView) — registering it after the Activity
-     * starts will throw an IllegalStateException.
-     *
-     * The lambda receives an ActivityResult which carries:
-     *   • getResultCode() — RESULT_OK or RESULT_CANCELED
-     *   • getData()       — the result Intent from AddPlanActivity
-     */
+    // ── Launcher ──────────────────────────────────────────────────────
     private final ActivityResultLauncher<Intent> addPlanLauncher =
             registerForActivityResult(
                     new ActivityResultContracts.StartActivityForResult(),
-                    result -> onAddPlanResult(result)   // called on the main thread ✓
+                    result -> onAddPlanResult(result)
             );
 
     // ─────────────────────────────────────────────────────────────────
@@ -85,19 +59,34 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        db = new DatabaseHelper(this);
+        db.initTodayBudget();       // carry-over or seed default
+
         initViews();
         displayTodayDate();
-        updateBudgetDisplay();
         setupRecyclerView();
+        updateBudgetDisplay();
         setupBottomNavigation();
-        setupFab();             // ← now launches AddPlanActivity
+        setupFab();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        refreshTodayMeals();
+        updateBudgetDisplay();
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (db != null) db.close();
+        super.onDestroy();
     }
 
     // ════════════════════════════════════════════════════════════════
-    // 1. UI INITIALISATION
+    // VIEWS
     // ════════════════════════════════════════════════════════════════
 
-    /** Binds every View in activity_main.xml to a Java field. */
     private void initViews() {
         recyclerMeals        = findViewById(R.id.recyclerMeals);
         fabAddMeal           = findViewById(R.id.fabAddMeal);
@@ -105,35 +94,81 @@ public class MainActivity extends AppCompatActivity {
         tvRemainingBudget    = findViewById(R.id.tvRemainingBudget);
         tvDate               = findViewById(R.id.tvDate);
         layoutEmptyState     = findViewById(R.id.layoutEmptyState);
+
+        // Tap the budget amount to edit it
+        tvRemainingBudget.setOnClickListener(v -> showSetBudgetDialog());
     }
 
-    /** Formats and displays today's date in the subtitle TextView. */
     private void displayTodayDate() {
         SimpleDateFormat sdf = new SimpleDateFormat("EEEE, MMMM dd yyyy", Locale.getDefault());
         tvDate.setText(sdf.format(new Date()));
     }
 
-    /**
-     * Recalculates the remaining budget and refreshes the display.
-     *
-     * Formula:  remaining = totalBudget − spentSoFar
-     * Homemade meals contribute 0 to spentSoFar, so they never
-     * reduce the remaining budget.
-     */
+    // ════════════════════════════════════════════════════════════════
+    // BUDGET
+    // ════════════════════════════════════════════════════════════════
+
     private void updateBudgetDisplay() {
-        double remaining = totalBudget - spentSoFar;
+        double remaining = db.getRemainingBudget();
         String formatted = String.format(Locale.getDefault(), "P%.2f", remaining);
         tvRemainingBudget.setText(formatted);
     }
 
+    /**
+     * Shows an AlertDialog with a numeric input so the user can set
+     * today's budget manually.
+     *
+     * Pre-fills the current total budget so the user knows the starting value.
+     */
+    private void showSetBudgetDialog() {
+        double currentBudget = db.getTodayTotalBudget();
+
+        // Build a simple EditText for the number input
+        EditText input = new EditText(this);
+        input.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        input.setText(String.format(Locale.getDefault(), "%.2f", currentBudget));
+        input.setSelectAllOnFocus(true);
+
+        // Add padding so the EditText doesn't touch the dialog edges
+        LinearLayout container = new LinearLayout(this);
+        container.setOrientation(LinearLayout.VERTICAL);
+        int padding = (int) (20 * getResources().getDisplayMetrics().density);
+        container.setPadding(padding, 0, padding, 0);
+        container.addView(input);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Set Today's Budget")
+                .setMessage("Enter your budget for today (₱):")
+                .setView(container)
+                .setPositiveButton("Save", (dialog, which) -> {
+                    String raw = input.getText().toString().trim();
+                    if (raw.isEmpty()) {
+                        Toast.makeText(this, "Please enter a budget amount.", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    try {
+                        double newBudget = Double.parseDouble(raw);
+                        if (newBudget < 0) {
+                            Toast.makeText(this, "Budget cannot be negative.", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        db.setDailyBudget(newBudget);
+                        updateBudgetDisplay();
+                        Toast.makeText(this,
+                                String.format(Locale.getDefault(), "Budget set to ₱%.2f", newBudget),
+                                Toast.LENGTH_SHORT).show();
+                    } catch (NumberFormatException e) {
+                        Toast.makeText(this, "Invalid amount. Enter a number like 500 or 350.50.", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
     // ════════════════════════════════════════════════════════════════
-    // 2. BOTTOM NAVIGATION LOGIC
+    // BOTTOM NAVIGATION
     // ════════════════════════════════════════════════════════════════
 
-    /**
-     * Sets up the BottomNavigationView item-selection listener.
-     * Toast placeholders — replace with Fragment transactions in Step 3.
-     */
     private void setupBottomNavigation() {
         bottomNavigationView.setSelectedItemId(R.id.nav_plan);
 
@@ -141,13 +176,12 @@ public class MainActivity extends AppCompatActivity {
             int itemId = item.getItemId();
 
             if (itemId == R.id.nav_plan) {
-                // TODO (Step 3): Replace with PlanFragment transaction
-                Toast.makeText(this, "Viewing your Meal Plan", Toast.LENGTH_SHORT).show();
                 return true;
 
             } else if (itemId == R.id.nav_past_records) {
-                // TODO (Step 3): Replace with PastRecordsFragment transaction
-                Toast.makeText(this, "Navigating to Archive", Toast.LENGTH_SHORT).show();
+                // Open the archive screen
+                Intent intent = new Intent(MainActivity.this, ArchiveActivity.class);
+                startActivity(intent);
                 return true;
             }
 
@@ -156,140 +190,84 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // ════════════════════════════════════════════════════════════════
-    // 3. FAB — Launch AddPlanActivity
+    // FAB
     // ════════════════════════════════════════════════════════════════
 
-    /**
-     * Replaces the Step 1 AlertDialog placeholder.
-     *
-     * Clicking the FAB creates an explicit Intent pointing at
-     * AddPlanActivity and launches it through the ActivityResultLauncher
-     * so we can receive the new Meal data when the user presses "Save Plan".
-     */
     private void setupFab() {
         fabAddMeal.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, AddPlanActivity.class);
-            // Optional: pass contextual data to AddPlanActivity in future steps
-            // intent.putExtra("current_budget", totalBudget - spentSoFar);
             addPlanLauncher.launch(intent);
         });
     }
 
     // ════════════════════════════════════════════════════════════════
-    // 4. ACTIVITY RESULT HANDLER
+    // ACTIVITY RESULT
     // ════════════════════════════════════════════════════════════════
 
-    /**
-     * Invoked by {@code addPlanLauncher} on the main thread after
-     * AddPlanActivity finishes.
-     *
-     * RESULT_OK     → extract Meal extras, add to list, update budget
-     * RESULT_CANCELED → user pressed Cancel; do nothing
-     *
-     * This method is always called on the main (UI) thread by the
-     * ActivityResultLauncher, so direct View manipulation is safe here.
-     *
-     * @param result The ActivityResult containing resultCode and data Intent.
-     */
     private void onAddPlanResult(ActivityResult result) {
-        if (result.getResultCode() != RESULT_OK || result.getData() == null) {
-            // User cancelled or something went wrong — silently ignore
-            return;
-        }
+        if (result.getResultCode() != RESULT_OK || result.getData() == null) return;
 
         Intent data = result.getData();
 
-        // ── Extract extras using AddPlanActivity's public keys ─────────
         String  mealName   = data.getStringExtra(AddPlanActivity.EXTRA_MEAL_NAME);
         String  category   = data.getStringExtra(AddPlanActivity.EXTRA_MEAL_CATEGORY);
         double  cost       = data.getDoubleExtra(AddPlanActivity.EXTRA_MEAL_COST, 0.0);
         boolean isHomemade = data.getBooleanExtra(AddPlanActivity.EXTRA_IS_HOMEMADE, false);
 
-        // ── Guard against malformed data ───────────────────────────────
         if (mealName == null || mealName.isEmpty()) {
             Toast.makeText(this, "Could not read meal data.", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // ── Build the Meal object and add it to the list ───────────────
-        Meal newMeal = new Meal(mealName, cost, isHomemade);
-        addMealToList(newMeal);
+        long rowId = db.insertMeal(category, mealName, cost, isHomemade);
+        if (rowId == -1) {
+            Toast.makeText(this, "Failed to save meal.", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
-        // ── Update the budget tracker ──────────────────────────────────
-        // Homemade meals have cost = 0.0, so they never reduce the budget
-        spentSoFar += cost;
+        addMealToList(new Meal(mealName, cost, isHomemade));
         updateBudgetDisplay();
 
-        // ── Confirm to the user ────────────────────────────────────────
-        String confirmation = category + " added: " + mealName;
-        Toast.makeText(this, confirmation, Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, category + " added: " + mealName, Toast.LENGTH_SHORT).show();
     }
 
     // ════════════════════════════════════════════════════════════════
-    // 5. RECYCLERVIEW SETUP
+    // RECYCLERVIEW
     // ════════════════════════════════════════════════════════════════
 
-    /** Initialises the RecyclerView with a LinearLayoutManager and dummy data. */
     private void setupRecyclerView() {
-        mealList = buildDummyMeals();
+        mealList = db.getTodayMealsAsMeal();
+        if (mealList == null) mealList = new ArrayList<>();
 
-        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
-        recyclerMeals.setLayoutManager(layoutManager);
-        recyclerMeals.setItemAnimator(null); // avoids flicker on updates
+        recyclerMeals.setLayoutManager(new LinearLayoutManager(this));
+        recyclerMeals.setItemAnimator(null);
 
         mealAdapter = new MealAdapter(this, mealList);
         recyclerMeals.setAdapter(mealAdapter);
 
         mealAdapter.setOnMealClickListener((meal, position) ->
-                        Toast.makeText(this, "Tapped: " + meal.getMealName(), Toast.LENGTH_SHORT).show()
-                // TODO (Step 3): Open EditMealBottomSheet
-        );
+                Toast.makeText(this, "Tapped: " + meal.getMealName(), Toast.LENGTH_SHORT).show());
 
-        // Sync the dummy data cost into spentSoFar so the budget is accurate
-        for (Meal meal : mealList) {
-            if (!meal.isHomemade()) {
-                spentSoFar += meal.getCost();
-            }
-        }
-        updateBudgetDisplay();
         updateEmptyState();
     }
 
-    // ════════════════════════════════════════════════════════════════
-    // HELPER METHODS
-    // ════════════════════════════════════════════════════════════════
+    private void refreshTodayMeals() {
+        List<Meal> fresh = db.getTodayMealsAsMeal();
+        if (fresh == null) fresh = new ArrayList<>();
+        mealList = fresh;
+        mealAdapter.updateList(fresh);
+        updateEmptyState();
+    }
 
-    /**
-     * Adds a new Meal to the adapter, scrolls to it, and refreshes
-     * the empty-state visibility.
-     *
-     * @param meal The Meal to insert at the end of the list.
-     */
     private void addMealToList(Meal meal) {
         mealAdapter.addMeal(meal);
         recyclerMeals.smoothScrollToPosition(mealList.size() - 1);
         updateEmptyState();
     }
 
-    /**
-     * Shows the RecyclerView or the empty-state layout depending on
-     * whether the meal list has any items.
-     */
     private void updateEmptyState() {
-        boolean isEmpty = mealList.isEmpty();
+        boolean isEmpty = (mealList == null || mealList.isEmpty());
         recyclerMeals.setVisibility(isEmpty ? View.GONE  : View.VISIBLE);
         layoutEmptyState.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
-    }
-
-    /**
-     * Returns a small set of hardcoded meals used during UI development.
-     * Remove once real persistence (Room / SharedPreferences) is wired up.
-     */
-    private List<Meal> buildDummyMeals() {
-        List<Meal> dummies = new ArrayList<>();
-        dummies.add(new Meal("Tapsilog",             85.00,  true));
-        dummies.add(new Meal("Chicken Adobo & Rice", 110.00, true));
-        dummies.add(new Meal("Jollibee Chickenjoy",  149.00, false));
-        return dummies;
     }
 }
